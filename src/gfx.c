@@ -19,12 +19,12 @@ void open_gfx_lib(lua_State *L) {
 }
 
 int putpixel(lua_State *L) {
-	SDL_Surface *screen = luaL_checkudata(L, 0, NULL);
-	int x = luaL_checkint(L, 1);
-	int y = luaL_checkint(L, 2);
-	int r = luaL_checkint(L, 3);
-	int g = luaL_checkint(L, 4);
-	int b = luaL_checkint(L, 5);
+	SDL_Surface *screen = luaL_checkudata(L, 1, NULL);
+	int x = luaL_checkint(L, 2);
+	int y = luaL_checkint(L, 3);
+	int r = luaL_checkint(L, 4);
+	int g = luaL_checkint(L, 5);
+	int b = luaL_checkint(L, 6);
 	
 	Uint32 pixel = SDL_MapRGB(screen->format, r, g, b);
     int bpp = screen->format->BytesPerPixel;

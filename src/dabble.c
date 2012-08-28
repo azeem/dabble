@@ -32,7 +32,7 @@ new_dabble(SDL_Surface *screen) {
 	int retval = luaL_loadfile(L, lua_tostring(L, -1));
 	if(retval != LUA_OK) {
 		lua_close(L);
-		fprintf(stderr, "Unable to load dabble lua library");
+		fprintf(stderr, "Unable to load dabble lua library : %s", lua_tostring(L, -1));
 		return NULL;
 	}
 	lua_call(L, 0, 1);
@@ -67,7 +67,7 @@ do_script(Dabble *dbl, const char *name) {
 	lua_newtable(dbl->L); // create the init dabble object
 	lua_pushlightuserdata(dbl->L, dbl->screen);
 	lua_setfield(dbl->L, -2, "screen");
-	lua_call(dbl->L, 2, 2);
+	lua_call(dbl->L, 3, 2);
 
 	// check if there were errors
 	if(!lua_isnil(dbl->L, -1)) {
@@ -76,11 +76,13 @@ do_script(Dabble *dbl, const char *name) {
 	}
 	lua_pop(dbl->L, 1); // remove the nil error message
 
+	printf("Running setup\n");
 	// run setup
 	lua_pushvalue(dbl->L, -1);
 	lua_getfield(dbl->L, -1, "setup");
 	lua_call(dbl->L, 0, 0);
 
+	printf("Draw loop");
 	// bring draw function to stack top
 	lua_getfield(dbl->L, -1, "draw");
 
