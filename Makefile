@@ -7,8 +7,8 @@ SRCDIR=src
 OBJDIR=obj
 LUADIR=lua
 
-CFLAGS+=-Wall -fPIC -D DBL_LUA_PATH="\"./$(LUADIR)/?.lua\"" `pkg-config --cflags sdl` -I/usr/include/lua/5.2
-LDFLAGS+=`pkg-config --libs sdl` -lm -llua5.2
+CFLAGS+=-Wall -g -fPIC -D DBL_LUA_PATH="\"./$(LUADIR)/?.lua\"" `pkg-config --cflags sdl lua5.2`
+LDFLAGS+=`pkg-config --libs sdl lua5.2`
 
 SOURCES=$(addprefix $(SRCDIR)/, $(CFILES))
 OBJECTS=$(addprefix $(OBJDIR)/, $(CFILES:.c=.o))
@@ -22,7 +22,7 @@ $(OUTDIR)/$(LUADIR)/%.lua: $(SRCDIR)/$(LUADIR)/%.lua
 
 $(OUTDIR)/$(OUT): $(OBJECTS)
 	mkdir -p $(OUTDIR)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c objdir
 	$(CC) $(CFLAGS) -c -o $@ $<
