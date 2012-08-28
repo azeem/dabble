@@ -1,5 +1,5 @@
 OUT=dabble
-CFILES=main.c dabble.c
+CFILES=main.c dabble.c gfx.c
 LUAFILES=dabble.lua test.lua
 
 OUTDIR=out
@@ -32,3 +32,6 @@ objdir:
 
 clean:
 	rm -r $(OBJDIR) $(OUTDIR)
+
+run: all
+	cd $(OUTDIR); ./$(OUT)

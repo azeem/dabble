@@ -1,6 +1,7 @@
 local Dabble = {
 	loaded = {},
 	path = '?.lua'
+	math = math
 }
 
 local function setfenv(func, env)
@@ -44,12 +45,17 @@ function Dabble:create(script_name, init)
 	self.__index = self
 	setmetatable(new_dbl, self)
 	setfenv(func, new_dbl)
+	-- setfenv(func, {DBL = new_dbl, print = print})
 	func()
-	setfenv(func, _G)
 	return new_dbl
 end
 
+function Dabble:put_pixel(x, y, r, g, b)
+	gfx.put_pixel(self.screen, x, y, r, g, b)
+end
+
 function Dabble.print(...)
+	print("heasdllo")
 	print(...)
 end
 

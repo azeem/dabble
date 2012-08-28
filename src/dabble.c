@@ -4,6 +4,7 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #include "dabble.h"
+#include "gfx.h"
 
 static void *
 dbl_malloc(size_t size) {
@@ -20,6 +21,7 @@ new_dabble(SDL_Surface *screen) {
 	lua_State *L = NULL;
 	L = luaL_newstate();
 	luaL_openlibs(L);
+	open_gfx_lib(L);
 
 	// search and load the dabble lua library
 	lua_getglobal(L, "package");
@@ -61,7 +63,10 @@ do_script(Dabble *dbl, const char *name) {
 	lua_getfield(dbl->L, -1, "create");
 	lua_pushvalue(dbl->L, -2);
 	lua_pushstring(dbl->L, name);
-	lua_remove(dbl->L, -4);
+	lua_remove(dbl->L, -4);	
+	lua_newtable(dbl->L); // create the init dabble object
+	lua_pushlightuserdata(dbl->L, dbl->screen);
+	lua_setfield(dbl->L, -2, "screen");
 	lua_call(dbl->L, 2, 2);
 
 	// check if there were errors
