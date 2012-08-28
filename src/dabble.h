@@ -4,7 +4,7 @@
 #include "SDL/SDL.h"
 #include "lua.h"
 
-#define DBL_LUA_PATH "./Debug/lib/?.lua"
+// #define DBL_LUA_PATH "./lua/?.lua"
 
 typedef struct dabble_s {
 	SDL_Surface *screen;
