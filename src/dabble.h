@@ -8,12 +8,18 @@
 
 typedef struct dabble_s {
 	SDL_Surface *screen;
-	lua_State *L;
-	int dbl_lib_ref;
+	Uint32 stroke_color;
+	int ellipse_mode;
 } Dabble;
 
-Dabble *new_dabble(SDL_Surface *screen);
-void free_dabble(Dabble *dbl);
-int do_script(Dabble *dbl, const char *name);
+void dbl_init_lua(lua_State *L);
+void dbl_load_dabble(lua_State *L, const char *script_name);
+void dbl_run_dabble(lua_State *L);
+
+// Ellipse modes
+#define CENTER  0
+#define RADIUS  1
+#define CORNER  2
+#define CORNERS 3
 
 #endif
