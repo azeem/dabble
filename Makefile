@@ -1,6 +1,6 @@
 OUT=dabble
 CFILES=main.c dabble.c
-LUAFILES=dabble.lua test.lua
+LUAFILES=test.lua
 
 OUTDIR=out
 SRCDIR=src
@@ -24,11 +24,9 @@ $(OUTDIR)/$(OUT): $(OBJECTS)
 	mkdir -p $(OUTDIR)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c objdir
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-objdir:
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -r $(OBJDIR) $(OUTDIR)

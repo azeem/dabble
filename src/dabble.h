@@ -8,8 +8,15 @@
 
 typedef struct dabble_s {
 	SDL_Surface *screen;
-	Uint32 stroke_color;
+	
 	int ellipse_mode;
+	int rect_mode;
+
+	int no_stroke;
+	Uint32 stroke_color;
+
+	int no_fill;
+	Uint32 fill_color;
 } Dabble;
 
 void dbl_init_lua(lua_State *L);

@@ -4,8 +4,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include <time.h>
 #include "dabble.h"
-#include "gfx.h"
 
 #define debug(...) { fprintf(stderr, "DEBUG:" __VA_ARGS__); fputc('\n', stderr);}
 
@@ -49,6 +49,12 @@ dbl_init_lua(lua_State *L) {
 	// init dbl_loaded table that stores closures of loaded scripts
 	lua_newtable(L);
 	lua_setglobal(L, "dbl_loaded");
+
+	// seed random
+	lua_getglobal(L, "math");
+	lua_getfield(L, -1, "randomseed");
+	lua_pushinteger(L, time(NULL));
+	lua_call(L, 1, 0);
 }
 
 void
@@ -192,9 +198,8 @@ dbl_println(lua_State *L) {
 	return 0;
 }
 
-int
-dbl_stroke(lua_State *L) {
-	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+static Uint32
+dbl_getcolorparam(lua_State *L) {
 	int r = luaL_checkint(L, 2);
 	int g = luaL_checkint(L, 3);
 	int b = luaL_checkint(L, 4);
@@ -203,17 +208,47 @@ dbl_stroke(lua_State *L) {
 	if(argc == 5) {
 		a = luaL_checkint(L, 5);
 	}
+	return ((r << 24) | (g << 16) | (b << 8) | a);
+}
 
-	dbl->stroke_color = (r << 24) | (g << 16) | (b << 8) | a;
+int
+dbl_stroke(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	dbl->stroke_color = dbl_getcolorparam(L);
+	dbl->no_stroke = 0;
 	return 0;
 }
 
 int
-dbl_pixel(lua_State *L) {
+dbl_fill(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	dbl->fill_color = dbl_getcolorparam(L);
+	dbl->no_fill = 0;
+	return 0;
+}
+
+int
+dbl_no_stroke(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	dbl->no_stroke = 1;
+	return 0;
+}
+
+int 
+dbl_no_fill(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	dbl->no_fill = 1;
+	return 0;
+}
+
+int
+dbl_point(lua_State *L) {
 	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
 	int x = luaL_checkint(L, 2);
 	int y = luaL_checkint(L, 3);
-	pixelColor(dbl->screen, x, y, dbl->stroke_color);
+	if(!dbl->no_stroke) {
+		pixelColor(dbl->screen, x, y, dbl->stroke_color);
+	}
 	return 0;
 }
 
@@ -224,7 +259,9 @@ dbl_line(lua_State *L) {
 	int y1 = luaL_checkint(L, 3);
 	int x2 = luaL_checkint(L, 4);
 	int y2 = luaL_checkint(L, 5);
-	lineColor(dbl->screen, x1, y1, x2, y2, dbl->stroke_color);
+	if(!dbl->no_stroke) {
+		lineColor(dbl->screen, x1, y1, x2, y2, dbl->stroke_color);
+	}
 	return 0;
 }
 
@@ -256,7 +293,79 @@ dbl_ellipse(lua_State *L) {
 			d >>= 1;
 			break;
 	}
-	ellipseColor(dbl->screen, a, b, c, d, dbl->stroke_color);
+	if(!dbl->no_fill) {
+		filledEllipseColor(dbl->screen, a, b, c, d, dbl->fill_color);
+	}
+	if(!dbl->no_stroke) {
+		ellipseColor(dbl->screen, a, b, c, d, dbl->stroke_color);
+	}
+	return 0;
+}
+
+int
+dbl_rect(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	int a = luaL_checkint(L, 2);
+	int b = luaL_checkint(L, 3);
+	int c = luaL_checkint(L, 4);
+	int d = luaL_checkint(L, 5);
+	switch(dbl->rect_mode) {
+		case CORNER:
+			a += c;
+			c = a-c;
+			d = b+d;
+			break;
+		case CORNERS: {
+			int t = a;
+			a = c;
+			c = t;
+			break;
+		}
+		case RADIUS:
+			a += c;
+			b -= d;
+			c = a-(c<<1);
+			d = b+(d<<1);
+			break;
+		default:
+		case CENTER:
+			a += (c>>1);
+			b -= (d>>1);
+			c = a-c;
+			d = b+d;
+			break;
+	}
+	if(!dbl->no_fill) {
+		boxColor(dbl->screen, a, b, c, d, dbl->fill_color);
+	}
+	if(!dbl->no_stroke) {
+		rectangleColor(dbl->screen, a, b, c, d, dbl->stroke_color);
+	}
+	return 0;
+}
+
+int
+dbl_quad(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	Sint16 vx[] = {
+		luaL_checkint(L, 2),
+		luaL_checkint(L, 4),
+		luaL_checkint(L, 6),
+		luaL_checkint(L, 8)
+	};
+	Sint16 vy[] = {
+		luaL_checkint(L, 3),
+		luaL_checkint(L, 5),
+		luaL_checkint(L, 7),
+		luaL_checkint(L, 9)
+	};
+	if(!dbl->no_fill) {
+		filledPolygonColor(dbl->screen, vx, vy, 4, dbl->fill_color);
+	}
+	if(!dbl->no_stroke) {
+		polygonColor(dbl->screen, vx, vy, 4, dbl->stroke_color);
+	}
+	return 0;
 }
 
 int
@@ -264,6 +373,15 @@ dbl_ellipse_mode(lua_State *L) {
 	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
 	int mode = luaL_checkint(L, 2);
 	dbl->ellipse_mode = mode;
+	return 0;
+}
+
+int
+dbl_rect_mode(lua_State *L) {
+	Dabble *dbl = (Dabble*)luaL_checkudata(L, 1, "Dabble");
+	int mode = luaL_checkint(L, 2);
+	dbl->rect_mode = mode;
+	return 0;
 }
 
 int
@@ -280,9 +398,15 @@ static struct luaL_Reg dabblelib[] = {
     {"__newindex", dbl_new_index},
     {"println", dbl_println},
     {"stroke", dbl_stroke},
-    {"pixel", dbl_pixel},
+    {"no_stroke", dbl_no_stroke},
+    {"fill", dbl_fill},
+    {"no_fill", dbl_no_fill},
+    {"point", dbl_point},
     {"line", dbl_line},
     {"ellipse_mode", dbl_ellipse_mode},
     {"ellipse", dbl_ellipse},
+    {"rect_mode", dbl_rect_mode},
+    {"rect", dbl_rect},
+    {"quad", dbl_quad},
     {NULL, NULL}
 };
