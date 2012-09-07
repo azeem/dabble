@@ -6,6 +6,7 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #include "dabble.h"
+#include "canvas.h"
 
 #define DEFAULT_SCREEN_WIDTH 640
 #define DEFAULT_SCREEN_HEIGHT 480
@@ -35,7 +36,8 @@ init() {
 	// intialize lua
 	L = luaL_newstate();
 	luaL_openlibs(L);
-	dbl_init_lua(L);
+	open_canvaslib(L);
+	open_dblscriptlib(L);
 	return 1;
 }
 
@@ -53,14 +55,12 @@ main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	dbl_load_dabble(L, script_name);
+	load_dabble(L, script_name, screen);
 	if(lua_isnil(L, -1)) {
 		fprintf(stderr, "Unable to load dabble script\n");
 		return 1;
 	}
-	Dabble *dbl = (Dabble*)lua_touserdata(L, -1);
-	dbl->screen = screen;
-	dbl_run_dabble(L);
+	run_dabble(L);
 	
 	cleanup();
 	return EXIT_SUCCESS;

@@ -1,16 +1,48 @@
+#include <SDL/SDL.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
 #include "canvas.h"
+#include <SDL_gfxPrimitives.h>
 
-#define CAVAS_SELF(L) ((Dabble*)luaL_checkudata(L, 1, "Canvas"))
+#define CANVAS_SELF(L) ((Canvas*)luaL_checkudata(L, 1, "Canvas"))
 
-static struct luaL_Reg cavaslib[];
+static struct luaL_Reg canvaslib[];
+static struct can_const_item {
+	const char *name;
+	int value;
+} canvasconstants[]  = {
+	{"CENTER",  CENTER},
+	{"RADIUS",  RADIUS},
+	{"CORNER",  CORNER},
+	{"CORNERS", CORNERS},
+	{NULL, 0},
+};
 
 void
 open_canvaslib(lua_State *L) {
 	luaL_newmetatable(L, "Canvas");
 	luaL_setfuncs(L, canvaslib, 0);
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+
+	// intialize the constants
+	struct can_const_item *const_item = canvasconstants;
+	while(const_item->name != NULL) {
+		lua_pushvalue(L, -1);
+		lua_pushinteger(L, const_item->value);
+		lua_setfield(L, -2, const_item->name);
+		const_item++;
+	}
+}
+
+void
+new_canvas(lua_State *L, SDL_Surface *screen) {
+	luaL_getmetatable(L, "Canvas");
+	lua_getfield(L, -1, "new");
+	lua_remove(L, -2);
+	lua_pushlightuserdata(L, screen);
+	lua_call(L, 1, 1);
 }
 
 /* Begin canvas lua class functions */
@@ -18,8 +50,8 @@ open_canvaslib(lua_State *L) {
 int
 l_canvas_new(lua_State *L) {
 	SDL_Surface *screen = (SDL_Surface*)lua_touserdata(L, -1);
-	canvas *can = lua_newuserdata(L, sizeof(canvas));
-	memset(can, 0, sizeof(canvas));
+	Canvas *can = lua_newuserdata(L, sizeof(Canvas));
+	memset(can, 0, sizeof(Canvas));
 	can->screen = screen;
 	luaL_setmetatable(L, "Canvas");
 	return 1;
@@ -40,7 +72,7 @@ getcolorparam(lua_State *L) {
 
 int
 l_canvas_stroke(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	can->stroke_color = getcolorparam(L);
 	can->no_stroke = 0;
 	return 0;
@@ -48,7 +80,7 @@ l_canvas_stroke(lua_State *L) {
 
 int
 l_canvas_fill(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	can->fill_color = getcolorparam(L);
 	can->no_fill = 0;
 	return 0;
@@ -56,21 +88,21 @@ l_canvas_fill(lua_State *L) {
 
 int
 l_canvas_no_stroke(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	can->no_stroke = 1;
 	return 0;
 }
 
 int 
 l_canvas_no_fill(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	can->no_fill = 1;
 	return 0;
 }
 
 int
 l_canvas_point(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int x = luaL_checkint(L, 2);
 	int y = luaL_checkint(L, 3);
 	if(!can->no_stroke) {
@@ -81,7 +113,7 @@ l_canvas_point(lua_State *L) {
 
 int
 l_canvas_line(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int x1 = luaL_checkint(L, 2);
 	int y1 = luaL_checkint(L, 3);
 	int x2 = luaL_checkint(L, 4);
@@ -94,7 +126,7 @@ l_canvas_line(lua_State *L) {
 
 int
 l_canvas_ellipse(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int a = luaL_checkint(L, 2);
 	int b = luaL_checkint(L, 3);
 	int c = luaL_checkint(L, 4);
@@ -131,7 +163,7 @@ l_canvas_ellipse(lua_State *L) {
 
 int
 l_canvas_rect(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int a = luaL_checkint(L, 2);
 	int b = luaL_checkint(L, 3);
 	int c = luaL_checkint(L, 4);
@@ -173,7 +205,7 @@ l_canvas_rect(lua_State *L) {
 
 int
 l_canvas_quad(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	Sint16 vx[] = {
 		luaL_checkint(L, 2),
 		luaL_checkint(L, 4),
@@ -197,7 +229,7 @@ l_canvas_quad(lua_State *L) {
 
 int
 l_canvas_ellipse_mode(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int mode = luaL_checkint(L, 2);
 	can->ellipse_mode = mode;
 	return 0;
@@ -205,14 +237,14 @@ l_canvas_ellipse_mode(lua_State *L) {
 
 int
 l_canvas_rect_mode(lua_State *L) {
-	canvas *can = CANVAS_SELF(L);
+	Canvas *can = CANVAS_SELF(L);
 	int mode = luaL_checkint(L, 2);
 	can->rect_mode = mode;
 	return 0;
 }
 
-static struct canvaslib[] = {
-	{"new", l_canvas_new}
+static struct luaL_Reg canvaslib[] = {
+	{"new", l_canvas_new},
     {"stroke", l_canvas_stroke},
     {"no_stroke", l_canvas_no_stroke},
     {"fill", l_canvas_fill},
