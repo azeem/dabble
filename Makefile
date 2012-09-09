@@ -1,5 +1,5 @@
 OUT=dabble
-CFILES=main.c dabble.c canvas.c script.c
+CFILES=main.c dabble.c canvas.c script.c trans.c
 LUAFILES=test.lua
 
 OUTDIR=out

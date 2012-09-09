@@ -7,6 +7,7 @@
 #include <lualib.h>
 #include "dabble.h"
 #include "canvas.h"
+#include "trans.h"
 
 #define DEFAULT_SCREEN_WIDTH 640
 #define DEFAULT_SCREEN_HEIGHT 480
@@ -38,6 +39,7 @@ init() {
 	luaL_openlibs(L);
 	open_canvaslib(L);
 	open_dblscriptlib(L);
+	open_movementlib(L);
 	return 1;
 }
 
