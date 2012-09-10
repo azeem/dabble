@@ -2,35 +2,41 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #include "dabble.h"
+#include "trans.h"
+#include "script.h"
 
 #define debug(...) { fprintf(stderr, "DEBUG:" __VA_ARGS__); fputc('\n', stderr);}
 
-void
-load_dabble(lua_State *L, const char *script_name, SDL_Surface *screen) {
-	debug("Loading dabble script");
-	luaL_getmetatable(L, "DabbleScript");
-	lua_getfield(L, -1, "init");
-	lua_pushstring(L, script_name);
-	lua_pushlightuserdata(L, screen);
-	lua_call(L, 2, 1);
+DabbleType *dbl_typelist[] = {
+	&dbl_movementtype,
+	NULL
+};
+
+Dabble*
+load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
+	// search for dabble type in C dabbles list
+	DabbleType **list_item = dbl_typelist;
+	DabbleType *dbl_type;
+	while((*list_item) != NULL) {
+		dbl_type = *list_item;
+		if(strcmp(dbl_type->name, dbl_typename) == 0) {
+			break;
+		}
+		list_item++;
+	}
+	if((*list_item) == NULL) {
+		dbl_type = &dbl_scripttype;
+	}
+	return dbl_type->init(dbl_typename, screen, L);
 }
 
 void
-run_dabble(lua_State *L) {
-	// stack: dabble_object
-	Dabble *dbl = (Dabble*)lua_touserdata(L, -1);
-
-	debug("Running setup");
-	// run setup
-	lua_pushvalue(L, -1);
-	lua_getfield(L, -1, "setup");
-	lua_call(L, 0, 0);
-
-	lua_pushvalue(L, -1);
-	lua_getfield(L, -1, "draw");
+run_dabble(Dabble *dbl) {
+	debug("Runnin setup");
+	dbl->type->setup(dbl);
 
 	debug("Begin Main Loop");
-	// main loop
+	// main loops
 	SDL_Event event;
 	int quit = 0;
 	while(!quit) {
@@ -39,8 +45,7 @@ run_dabble(lua_State *L) {
 				quit = 1;
 			}
 		}
-		lua_pushvalue(L, -1);
-		lua_call(L, 0, 0);
+		dbl->type->draw(dbl);
 		SDL_UpdateRect(dbl->screen, 0, 0, dbl->screen->w, dbl->screen->h); 
 	}
 }

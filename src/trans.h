@@ -7,6 +7,6 @@ typedef struct DabbleMovement {
 	Dabble dbl;
 } DabbleMovement;
 
-void open_movementlib(lua_State *L);
+DabbleType dbl_movementtype;
 
 #endif

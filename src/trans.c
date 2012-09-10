@@ -3,37 +3,25 @@
 #include <lualib.h>
 #include "trans.h"
 
-static struct luaL_Reg movementlib[];
-
-void
-open_movementlib(lua_State *L) {
-	luaL_newmetatable(L, "DabbleMovement");
-	luaL_setfuncs(L, movementlib, 0);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
-}
-
-static int
-l_movement_init(lua_State *L) {
-	//const char *script_name = luaL_checkstring(L, 1);
-	SDL_Surface *screen = (SDL_Surface*)lua_touserdata(L, -1);
-
-	DabbleMovement *dbl_mov = lua_newuserdata(L, sizeof(DabbleMovement));
+Dabble*
+movement_init(const char *type_name, SDL_Surface *screen, lua_State *L) {
+	DabbleMovement *dbl_mov = malloc(sizeof(DabbleMovement));
 	memset(dbl_mov, 0, sizeof(DabbleMovement));
 	dbl_mov->dbl.screen = screen;
-	luaL_setmetatable(L, "DabbleMovement");
-	return 1;
+	dbl_mov->dbl.L = L;
+	dbl_mov->dbl.type = &dbl_movementtype;
+	return (Dabble*)dbl_mov;
 }
 
-static int
-l_movement_noop(lua_State *L) {
+void
+movement_noop(Dabble *dbl) {
 	fprintf(stderr, "NOOP\n");
-	return 0;
+	return;
 }
 
-static struct luaL_Reg movementlib[] = {
-	{"init", l_movement_init},
-	{"setup", l_movement_noop},
-	{"draw", l_movement_noop},
-	{NULL, NULL}
+DabbleType dbl_movementtype = {
+	"Movement",
+	movement_init,
+	movement_noop,
+	movement_noop
 };

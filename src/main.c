@@ -39,7 +39,6 @@ init() {
 	luaL_openlibs(L);
 	open_canvaslib(L);
 	open_dblscriptlib(L);
-	open_movementlib(L);
 	return 1;
 }
 
@@ -57,12 +56,11 @@ main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	load_dabble(L, script_name, screen);
-	if(lua_isnil(L, -1)) {
-		fprintf(stderr, "Unable to load dabble script\n");
+	Dabble *dbl = load_dabble(L, script_name, screen);
+	if(!dbl) {
 		return 1;
 	}
-	run_dabble(L);
+	run_dabble(dbl);
 	
 	cleanup();
 	return EXIT_SUCCESS;
