@@ -10,16 +10,17 @@ typedef struct Dabble {
 	SDL_Surface *screen;
 	lua_State *L;
 	struct DabbleType *type;
+	int param;
 } Dabble;
 
 typedef struct DabbleType {
 	const char *name;
-	Dabble *(*init)(const char *type_name, SDL_Surface *screen, lua_State *L);
+	int  (*init)(Dabble *dbl, const char *dbl_typename);
 	void (*setup)(Dabble *dbl);
 	void (*draw)(Dabble *dbl);
+	size_t size;
 } DabbleType;
 
-Dabble *load_dabble(lua_State *L, const char *script_name, SDL_Surface *screen);
+Dabble *load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen);
 void run_dabble(Dabble *dbl);
-
 #endif

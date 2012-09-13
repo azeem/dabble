@@ -27,7 +27,21 @@ load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
 	if((*list_item) == NULL) {
 		dbl_type = &dbl_scripttype;
 	}
-	return dbl_type->init(dbl_typename, screen, L);
+
+	Dabble *dbl = (Dabble*)malloc(dbl_type->size);
+	memset(dbl, 0, sizeof(dbl_type->size));
+	dbl->screen = screen;
+	dbl->L = L;
+	dbl->type = dbl_type;
+	dbl->param = luaL_ref(L, LUA_REGISTRYINDEX);
+	
+	if(dbl_type->init(dbl, dbl_typename)) {
+		return dbl;
+	}
+	else {
+		free(dbl);
+		return NULL;
+	}
 }
 
 void

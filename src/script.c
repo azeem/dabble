@@ -27,7 +27,9 @@ open_dblscriptlib(lua_State *L) {
 }
 
 
-Dabble *dblscript_init(const char *type_name, SDL_Surface *screen, lua_State *L) {
+int
+dblscript_init(Dabble *dbl, const char *type_name) {
+	lua_State *L = dbl->L;
 	int stack_top = lua_gettop(L);
 
 	lua_getglobal(L, "dbl_loaded");
@@ -42,7 +44,7 @@ Dabble *dblscript_init(const char *type_name, SDL_Surface *screen, lua_State *L)
 		if(lua_isnil(L, -1)) {
 			fprintf(stderr, "Dabble script '%s' not found", type_name);
 			lua_settop(L, stack_top);
-			return NULL;
+			return 0;
 		}
 
 		// load the script
@@ -50,7 +52,7 @@ Dabble *dblscript_init(const char *type_name, SDL_Surface *screen, lua_State *L)
 		if(load_status != LUA_OK) {
 			fprintf(stderr, "Dabble script '%s' could not be loaded", type_name);
 			lua_settop(L, stack_top);
-			return NULL;
+			return 0;
 		}
 
 		// stack: script_function, script_path, nil, dbl_loaded
@@ -58,23 +60,16 @@ Dabble *dblscript_init(const char *type_name, SDL_Surface *screen, lua_State *L)
 		lua_setfield(L, -4, type_name);
 	}
 
-	// create a new dabble object
-	DabbleScript *dbl_script = malloc(sizeof(DabbleScript));
-	memset(dbl_script, 0, sizeof(DabbleScript));
-	dbl_script->dbl.screen = screen;
-	dbl_script->dbl.L = L;
-	dbl_script->dbl.type = &dbl_scripttype;
-
 	// setup the script environment
 	lua_newtable(L);
-	new_canvas(L, screen);
+	new_canvas(L, dbl->screen);
 	lua_setfield(L, -2, "canvas");
-	lua_pushlightuserdata(L, dbl_script);
+	lua_pushlightuserdata(L, dbl);
 	lua_setfield(L, -2, "dbl_script");
 	lua_pushvalue(L, -1);
 	luaL_getmetatable(L, "DabbleScriptEnv");
 	lua_setmetatable(L, -2);
-	dbl_script->env = luaL_ref(L, LUA_REGISTRYINDEX);
+	DBLSCRIPT(dbl)->env = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	// set _ENV of script and run it
 	//stack: object, script_function
@@ -84,21 +79,19 @@ Dabble *dblscript_init(const char *type_name, SDL_Surface *screen, lua_State *L)
 	lua_call(L, 0, 0);
 
 	lua_settop(L, stack_top);
-	return (Dabble*)dbl_script;
+	return 1;
 }
 
 static void
 call_envfunc(const char *funcname, Dabble *dbl) {
 	lua_State *L = dbl->L;
 	int stack_top = lua_gettop(L);
-	DabbleScript *dbl_script = (DabbleScript*)dbl;
-	lua_rawgeti(L, LUA_REGISTRYINDEX, dbl_script->env);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, DBLSCRIPT(dbl)->env);
 	lua_getfield(L, -1, funcname);
 	if(!lua_isnil(L, -1)) {
 		lua_call(L, 0, 0);
 	}
 	lua_settop(L, stack_top);
-
 }
 
 void dblscript_setup(Dabble *dbl) {
@@ -113,10 +106,11 @@ struct DabbleType dbl_scripttype = {
 	"DabbleScript",
 	dblscript_init,
 	dblscript_setup,
-	dblscript_draw
+	dblscript_draw,
+	sizeof(DabbleScript)
 };
 
-/* Begin Dabble Lua class functions */
+/* Begin Dabble Lua Environment class functions */
 
 static int
 l_script_index(lua_State *L) {
@@ -131,7 +125,7 @@ l_script_index(lua_State *L) {
 
 	const char *key = lua_tostring(L, -1);
 	lua_getfield(L, -2, "dbl_script");
-	const DabbleScript *dbl_script = (DabbleScript *)lua_touserdata(L, -1);//lua_touserdata(Lua, -2);
+	const DabbleScript *dbl_script = DBLSCRIPT(lua_touserdata(L, -1));
 	if(strcmp(key, "height") == 0) {
 		lua_pushinteger(L, dbl_script->dbl.screen->h);
 		return 1;
@@ -162,7 +156,6 @@ l_script_println(lua_State *L) {
 
 static struct luaL_Reg dblscriptlib[] = {
     {"__index", l_script_index},
-    //{"__newindex", l_script_newindex},
 	{"println", l_script_println},
     {NULL, NULL}
 };

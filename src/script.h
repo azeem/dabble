@@ -10,6 +10,8 @@ typedef struct DabbleScript {
 	int env;
 } DabbleScript;
 
+#define DBLSCRIPT(dbl) ((DabbleScript*)dbl)
+
 struct DabbleType dbl_scripttype;
 
 void open_dblscriptlib(lua_State *L);

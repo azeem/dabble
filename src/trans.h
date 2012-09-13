@@ -5,7 +5,10 @@
 
 typedef struct DabbleMovement {
 	Dabble dbl;
+	SDL_Surface *buffer;
 } DabbleMovement;
+
+#define DBLMOV(dbl) ((DabbleMovement*)dbl)
 
 DabbleType dbl_movementtype;
 
