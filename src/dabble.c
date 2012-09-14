@@ -7,13 +7,24 @@
 
 #define debug(...) { fprintf(stderr, "DEBUG:" __VA_ARGS__); fputc('\n', stderr);}
 
-DabbleType *dbl_typelist[] = {
+static luaL_Reg dbllib[];
+
+void
+open_dbllib(lua_State *L) {
+	lua_newmetatable(L, "Dabble");
+	luaL_setfuncs(L, dbllib, 0);
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+}
+
+static DabbleType *dbl_typelist[] = {
 	&dbl_movementtype,
 	NULL
 };
 
 Dabble*
-load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
+load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen, int luaobj) {
 	// search for dabble type in C dabbles list
 	DabbleType **list_item = dbl_typelist;
 	DabbleType *dbl_type;
@@ -28,7 +39,15 @@ load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
 		dbl_type = &dbl_scripttype;
 	}
 
-	Dabble *dbl = (Dabble*)malloc(dbl_type->size);
+	Dabble *obj = NULL;
+	if(luaobj) {
+		dbl = (Dabble*)lua_newuserdata(dbl_type->size);
+		luaL_setmetatable(L, "Dabble");
+		lua_pop(L, 1);
+	}
+	else {
+		dbl = (Dabble*)malloc(dbl_type->size);
+	}
 	memset(dbl, 0, sizeof(dbl_type->size));
 	dbl->screen = screen;
 	dbl->L = L;
@@ -39,9 +58,18 @@ load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
 		return dbl;
 	}
 	else {
-		free(dbl);
+		if(!luaobj) {
+			free(dbl);
+		}
 		return NULL;
 	}
+}
+
+void
+destroy_dabble(Dabble *dbl) {
+	dbl->type->destroy(dbl);
+	luaL_unref(dbl->L, LUA_REGISTRYINDEX, dbl->param);
+	free(dbl);
 }
 
 void
@@ -63,3 +91,33 @@ run_dabble(Dabble *dbl) {
 		SDL_UpdateRect(dbl->screen, 0, 0, dbl->screen->w, dbl->screen->h); 
 	}
 }
+
+/* Begin Dabble lua class functions */
+
+int
+l_dabble_setup(lua_State *L) {
+	Dabble *dbl = (Dabble *)lua_checkudata(L, 1, "Dabble");
+	dbl->type->setup(dbl);
+	return 0;
+}
+
+int
+l_dabble_draw(lua_State *L) {
+	Dabble *dbl = (Dabble *)lua_checkudata(L, 1, "Dabble");
+	dbl->type->draw(dbl);
+}
+
+int
+l_dabble_gc(lua_State *L) {
+	Dabble *dbl = (Dabbe *)lua_touserdata(L, -1);
+	dbl->type->destroy(dbl);
+	luaL_unref(L, LUA_REGISTRYINDEX, dbl->param);
+	return 0;
+}
+
+static luaL_Reg dbllib[] = {
+	{"__gc", l_dabble_gc},
+	{"setup", l_dabble_setup},
+	{"draw", l_dabble_draw},
+	{NULL, NULL}
+};

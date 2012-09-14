@@ -6,6 +6,7 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #include "dabble.h"
+#include "script.h"
 #include "canvas.h"
 #include "trans.h"
 
@@ -56,6 +57,7 @@ main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	lua_pushnil(L);
 	Dabble *dbl = load_dabble(L, script_name, screen);
 	if(!dbl) {
 		return 1;

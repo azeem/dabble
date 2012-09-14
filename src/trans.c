@@ -29,13 +29,14 @@ movement_draw(Dabble *dbl) {
 	SDL_Surface *buffer = dbl_mov->buffer;
 	SDL_Surface *screen = dbl->screen;
 
+	ParamRef func = param_get(dbl, "func");
 	SDL_FillRect(buffer, NULL, 0);
 	int x, y, nx, ny;
     int bpp = screen->format->BytesPerPixel;
     Uint8 *src, *dest;
 	for(x = 0;x < buffer->w;x++) {
 		for(y = 0;y < buffer->h;y++) {
-			param_callfunc(dbl, "func", "II:II", x, y, &nx, &ny);
+			param_callfunc(dbl, func, "II:II", x, y, &nx, &ny);
 			src  = (Uint8 *)screen->pixels + y * screen->pitch + x * bpp;
 			dest = (Uint8 *)buffer->pixels + ny * buffer->pitch + nx * bpp;
 			memcpy(dest, src, bpp);

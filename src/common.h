@@ -4,8 +4,15 @@
 #include <SDL/SDL.h>
 #include "dabble.h"
 
-int param_checktype(Dabble *dbl, const char *paramname, int reqtype);
-void param_callfunc(Dabble *dbl, const char *paramname, const char *types, ...);
+typedef int ParamRef;
+
+int param_checktype(Dabble *dbl, const char *paramname, int type);
+ParamRef param_get(Dabble *dbl, const char *paramname);
+int param_tointeger(Dabble *dbl, ParamRef ref);
+const char *param_tostring(Dabble *dbl, ParamRef ref);
+int param_listlength(Dabble *dbl, ParamRef ref);
+ParamRef param_listget(Dabble *dbl, ParamRef ref, int index);
+void param_callfunc(Dabble *dbl, ParamRef ref, const char *types, ...);
 
 void dbl_noop(Dabble *dbl);
 

@@ -18,6 +18,7 @@ typedef struct DabbleType {
 	int  (*init)(Dabble *dbl, const char *dbl_typename);
 	void (*setup)(Dabble *dbl);
 	void (*draw)(Dabble *dbl);
+	void (*destroy)(Dabble *dbl);
 	size_t size;
 } DabbleType;
 

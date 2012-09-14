@@ -10,14 +10,52 @@
 int
 param_checktype(Dabble *dbl, const char *paramname, int reqtype) {
 	lua_rawgeti(dbl->L, LUA_REGISTRYINDEX, dbl->param);
+	if(lua_isnil(dbl->L, -1)) {
+		return 0;
+	}
 	lua_getfield(dbl->L, -1, paramname);
 	int type = lua_type(dbl->L, -1);
 	lua_pop(dbl->L, 2);
-	return (type == reqtype);
+	return (reqtype == type);
 }
 
+ParamRef
+param_get(Dabble *dbl, const char *paramname) {
+	lua_rawgeti(dbl->L, LUA_REGISTRYINDEX, dbl->param);
+	lua_getfield(dbl->L, -1, paramname);
+	lua_remove(dbl->L, -2);
+	return lua_gettop(dbl->L);
+}
+
+// C data conversion functions
+int
+param_tointeger(Dabble *dbl, ParamRef ref) {
+	return lua_tointeger(dbl->L, ref);
+}
+
+const char*
+param_tostring(Dabble *dbl, ParamRef ref) {
+	return lua_tostring(dbl->L, ref);
+}
+
+// list operators
+int
+param_listlength(Dabble *dbl, ParamRef ref) {
+	lua_len(dbl->L, ref);
+	int len = lua_tointeger(dbl->L, -1);
+	lua_pop(dbl->L, 1);
+	return len;
+}
+
+ParamRef
+param_listget(Dabble *dbl, ParamRef ref, int index) {
+	lua_rawgeti(dbl->L, ref, index-1);
+	return lua_gettop(dbl->L);
+}
+
+// function operators
 void
-param_callfunc(Dabble *dbl, const char *paramname, const char *types, ...) {
+param_callfunc(Dabble *dbl, ParamRef ref, const char *types, ...) {
 	lua_State *L = dbl->L;
 	int stacktop = lua_gettop(L);
 
@@ -34,8 +72,7 @@ param_callfunc(Dabble *dbl, const char *paramname, const char *types, ...) {
 	va_start(argp, types);
 
 	// push the function
-	lua_rawgeti(L, LUA_REGISTRYINDEX, dbl->param);
-	lua_getfield(L, -1, paramname);
+	lua_pushvalue(L, ref);
 
 	// push the arguments
 	while(*argtypes) {
