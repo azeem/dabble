@@ -86,14 +86,14 @@ run_dabble(Dabble *dbl) {
 
 int
 l_dabble_setup(lua_State *L) {
-	Dabble *dbl = (Dabble *)luaL_checkudata(L, 1, "Dabble");
+	Dabble *dbl = DBL(luaL_checkudata(L, 1, "Dabble"));
 	dbl->type->setup(dbl);
 	return 0;
 }
 
 int
 l_dabble_draw(lua_State *L) {
-	Dabble *dbl = (Dabble *)luaL_checkudata(L, 1, "Dabble");
+	Dabble *dbl = DBL(luaL_checkudata(L, 1, "Dabble"));
 	dbl->type->draw(dbl);
 	return 0;
 }
@@ -106,9 +106,22 @@ l_dabble_gc(lua_State *L) {
 	return 0;
 }
 
+int
+l_dabble_create(lua_State *L) {
+	Dabble *dbl = DBL(luaL_checkudata(L, 1, "Dabble"));
+	luaL_checktype(L, 2, LUA_TTABLE);
+	
+	lua_getfield(L, -1, "type");
+	const char *typename = lua_tostring(L, -1);
+	lua_pushvalue(L, -2);
+	create_dabble(L, typename, dbl->screen);
+	return 1;
+}
+
 static luaL_Reg dbllib[] = {
 	{"__gc", l_dabble_gc},
 	{"setup", l_dabble_setup},
 	{"draw", l_dabble_draw},
+	{"create", l_create_draw},
 	{NULL, NULL}
 };

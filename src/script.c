@@ -153,18 +153,6 @@ l_script_index(lua_State *L) {
 }
 
 int
-l_script_create(lua_State *L) {
-	Dabble *dbl = DBL(luaL_checkudata(L, 1, "Dabble"));
-	luaL_checktype(L, 2, LUA_TTABLE);
-	
-	lua_getfield(L, -1, "type");
-	const char *typename = lua_tostring(L, -1);
-	lua_pushvalue(L, -2);
-	create_dabble(L, typename, dbl->screen);
-	return 1;
-}
-
-int
 l_script_println(lua_State *L) {
 	const char *message = luaL_checkstring(L, 1);
 	printf("%s\n", message);
@@ -173,7 +161,6 @@ l_script_println(lua_State *L) {
 
 static struct luaL_Reg dblscriptlib[] = {
     {"__index", l_script_index},
-    {"create", l_script_create},
 	{"println", l_script_println},
     {NULL, NULL}
 };
