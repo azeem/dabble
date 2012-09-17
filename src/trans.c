@@ -45,10 +45,16 @@ movement_draw(Dabble *dbl) {
 	SDL_BlitSurface(buffer, NULL, screen, NULL);
 }
 
+void
+movement_destroy(Dabble *dbl) {
+	SDL_FreeSurface(DBLMOV(dbl)->buffer);
+}
+
 DabbleType dbl_movementtype = {
 	"Movement",
 	movement_init,
 	dbl_noop,
 	movement_draw,
+	movement_destroy,
 	sizeof(DabbleMovement)
 };

@@ -40,6 +40,7 @@ init() {
 	luaL_openlibs(L);
 	open_canvaslib(L);
 	open_dblscriptlib(L);
+	open_dbllib(L);
 	return 1;
 }
 
@@ -52,13 +53,13 @@ void cleanup() {
 
 int
 main(int argc, char **argv) {
-	const char *script_name = "test";
+	const char *script_name = "trans_test";
 	if(!init()) {
 		return EXIT_FAILURE;
 	}
 
 	lua_pushnil(L);
-	Dabble *dbl = load_dabble(L, script_name, screen);
+	Dabble *dbl = create_dabble(L, script_name, screen);
 	if(!dbl) {
 		return 1;
 	}

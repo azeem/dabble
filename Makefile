@@ -1,6 +1,6 @@
 OUT=dabble
 CFILES=main.c dabble.c canvas.c script.c trans.c common.c
-LUAFILES=test.lua
+LUAFILES=test.lua trans_test.lua
 
 OUTDIR=out
 SRCDIR=src

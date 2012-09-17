@@ -11,7 +11,7 @@ static luaL_Reg dbllib[];
 
 void
 open_dbllib(lua_State *L) {
-	lua_newmetatable(L, "Dabble");
+	luaL_newmetatable(L, "Dabble");
 	luaL_setfuncs(L, dbllib, 0);
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");
@@ -24,7 +24,7 @@ static DabbleType *dbl_typelist[] = {
 };
 
 Dabble*
-load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen, int luaobj) {
+create_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
 	// search for dabble type in C dabbles list
 	DabbleType **list_item = dbl_typelist;
 	DabbleType *dbl_type;
@@ -39,15 +39,8 @@ load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen, int lua
 		dbl_type = &dbl_scripttype;
 	}
 
-	Dabble *obj = NULL;
-	if(luaobj) {
-		dbl = (Dabble*)lua_newuserdata(dbl_type->size);
-		luaL_setmetatable(L, "Dabble");
-		lua_pop(L, 1);
-	}
-	else {
-		dbl = (Dabble*)malloc(dbl_type->size);
-	}
+	Dabble *dbl = (Dabble*)lua_newuserdata(L, dbl_type->size);
+	luaL_setmetatable(L, "Dabble");
 	memset(dbl, 0, sizeof(dbl_type->size));
 	dbl->screen = screen;
 	dbl->L = L;
@@ -58,24 +51,18 @@ load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen, int lua
 		return dbl;
 	}
 	else {
-		if(!luaobj) {
-			free(dbl);
-		}
+		lua_pop(L, 1);
 		return NULL;
 	}
 }
 
 void
-destroy_dabble(Dabble *dbl) {
-	dbl->type->destroy(dbl);
-	luaL_unref(dbl->L, LUA_REGISTRYINDEX, dbl->param);
-	free(dbl);
-}
-
-void
 run_dabble(Dabble *dbl) {
+	int stacktop;
+	stacktop = lua_gettop(dbl->L);
 	debug("Runnin setup");
 	dbl->type->setup(dbl);
+	lua_settop(dbl->L, stacktop);
 
 	debug("Begin Main Loop");
 	// main loops
@@ -87,7 +74,10 @@ run_dabble(Dabble *dbl) {
 				quit = 1;
 			}
 		}
+
+		stacktop = lua_gettop(dbl->L);
 		dbl->type->draw(dbl);
+		lua_settop(dbl->L, stacktop);
 		SDL_UpdateRect(dbl->screen, 0, 0, dbl->screen->w, dbl->screen->h); 
 	}
 }
@@ -96,20 +86,21 @@ run_dabble(Dabble *dbl) {
 
 int
 l_dabble_setup(lua_State *L) {
-	Dabble *dbl = (Dabble *)lua_checkudata(L, 1, "Dabble");
+	Dabble *dbl = (Dabble *)luaL_checkudata(L, 1, "Dabble");
 	dbl->type->setup(dbl);
 	return 0;
 }
 
 int
 l_dabble_draw(lua_State *L) {
-	Dabble *dbl = (Dabble *)lua_checkudata(L, 1, "Dabble");
+	Dabble *dbl = (Dabble *)luaL_checkudata(L, 1, "Dabble");
 	dbl->type->draw(dbl);
+	return 0;
 }
 
 int
 l_dabble_gc(lua_State *L) {
-	Dabble *dbl = (Dabbe *)lua_touserdata(L, -1);
+	Dabble *dbl = (Dabble *)lua_touserdata(L, -1);
 	dbl->type->destroy(dbl);
 	luaL_unref(L, LUA_REGISTRYINDEX, dbl->param);
 	return 0;

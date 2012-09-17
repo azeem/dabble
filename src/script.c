@@ -65,7 +65,7 @@ dblscript_init(Dabble *dbl, const char *type_name) {
 	new_canvas(L, dbl->screen);
 	lua_setfield(L, -2, "canvas");
 	lua_pushlightuserdata(L, dbl);
-	lua_setfield(L, -2, "dbl_script");
+	lua_setfield(L, -2, "dbl");
 	lua_pushvalue(L, -1);
 	luaL_getmetatable(L, "DabbleScriptEnv");
 	lua_setmetatable(L, -2);
@@ -102,11 +102,16 @@ void dblscript_draw(Dabble *dbl) {
 	call_envfunc("draw", dbl);	
 }
 
+void dblscript_destroy(Dabble *dbl) {
+	luaL_unref(dbl->L, LUA_REGISTRYINDEX, DBLSCRIPT(dbl)->env);
+}
+
 struct DabbleType dbl_scripttype = {
 	"DabbleScript",
 	dblscript_init,
 	dblscript_setup,
 	dblscript_draw,
+	dblscript_destroy,
 	sizeof(DabbleScript)
 };
 
@@ -124,14 +129,14 @@ l_script_index(lua_State *L) {
 	lua_pop(L, 1);
 
 	const char *key = lua_tostring(L, -1);
-	lua_getfield(L, -2, "dbl_script");
-	const DabbleScript *dbl_script = DBLSCRIPT(lua_touserdata(L, -1));
+	lua_getfield(L, -2, "dbl");
+	Dabble *dbl = DBL(lua_touserdata(L, -1));
 	if(strcmp(key, "height") == 0) {
-		lua_pushinteger(L, dbl_script->dbl.screen->h);
+		lua_pushinteger(L, dbl->screen->h);
 		return 1;
 	}
 	else if(strcmp(key, "width") == 0) {
-		lua_pushinteger(L, dbl_script->dbl.screen->w);
+		lua_pushinteger(L, dbl->screen->w);
 		return 1;
 	}
 	else if(strcmp(key, "math") == 0) {
@@ -148,6 +153,18 @@ l_script_index(lua_State *L) {
 }
 
 int
+l_script_create(lua_State *L) {
+	Dabble *dbl = DBL(luaL_checkudata(L, 1, "Dabble"));
+	luaL_checktype(L, 2, LUA_TTABLE);
+	
+	lua_getfield(L, -1, "type");
+	const char *typename = lua_tostring(L, -1);
+	lua_pushvalue(L, -2);
+	create_dabble(L, typename, dbl->screen);
+	return 1;
+}
+
+int
 l_script_println(lua_State *L) {
 	const char *message = luaL_checkstring(L, 1);
 	printf("%s\n", message);
@@ -156,6 +173,7 @@ l_script_println(lua_State *L) {
 
 static struct luaL_Reg dblscriptlib[] = {
     {"__index", l_script_index},
+    {"create", l_script_create},
 	{"println", l_script_println},
     {NULL, NULL}
 };

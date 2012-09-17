@@ -22,6 +22,9 @@ typedef struct DabbleType {
 	size_t size;
 } DabbleType;
 
-Dabble *load_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen);
+#define DBL(dbl) ((Dabble*)dbl)
+
+void open_dbllib(lua_State *L);
+Dabble *create_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen);
 void run_dabble(Dabble *dbl);
 #endif
