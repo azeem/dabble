@@ -32,7 +32,7 @@ dblscript_init(Dabble *dbl, const char *type_name) {
 	lua_State *L = dbl->L;
 	int stack_top = lua_gettop(L);
 
-	lua_getglobal(L, "dbl_loaded");
+	lua_getglobal(L, "dbl_loaded"); // TODO: change this
 	lua_getfield(L, -1, type_name);
 	if(lua_isnil(L, -1)) {
 		// search the script in the path
@@ -64,8 +64,11 @@ dblscript_init(Dabble *dbl, const char *type_name) {
 	lua_newtable(L);
 	new_canvas(L, dbl->screen);
 	lua_setfield(L, -2, "canvas");
-	lua_pushlightuserdata(L, dbl);
-	lua_setfield(L, -2, "dbl");
+
+	lua_getfield(L, LUA_REGISTRYINDEX, DBL_WEAKREF_INDEX);
+	lua_rawgetp(L, -1, dbl);
+	lua_setfield(L, -3, "dbl");
+	
 	lua_pushvalue(L, -1);
 	luaL_getmetatable(L, "DabbleScriptEnv");
 	lua_setmetatable(L, -2);

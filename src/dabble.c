@@ -16,6 +16,16 @@ open_dbllib(lua_State *L) {
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
+
+	lua_newtable(L); // create weakreference table
+	lua_newtable(L);
+	lua_pushstring(L, "v");
+	lua_setfield(L, -1, "__mode");
+	lua_setmetatable(L, -2);
+	lua_setfield(L, LUA_REGISTRYINDEX, DBL_WEAKREF_INDEX);
+
+	lua_newtable(L); // create strongreference table
+	lua_setfield(L, LUA_REGISTRYINDEX, DBL_STRONGREF_INDEX);
 }
 
 static DabbleType *dbl_typelist[] = {
@@ -23,8 +33,12 @@ static DabbleType *dbl_typelist[] = {
 	NULL
 };
 
-Dabble*
-create_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
+static Dabble*
+create_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen, int param_index, int strong) {
+	int stacktop = lua_gettop(L);
+	if(param_index < 0) {
+		param_index = stacktop + 1 + param_index;
+	}
 	// search for dabble type in C dabbles list
 	DabbleType **list_item = dbl_typelist;
 	DabbleType *dbl_type;
@@ -42,27 +56,69 @@ create_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
 	Dabble *dbl = (Dabble*)lua_newuserdata(L, dbl_type->size);
 	luaL_setmetatable(L, "Dabble");
 	memset(dbl, 0, sizeof(dbl_type->size));
+
+	lua_getfield(L, LUA_REGISTRYINDEX, DBL_WEAKREF_INDEX);
+	lua_rawsetp(L, -1, dbl);
+	if(strong) {
+		lua_getfield(L, LUA_REGISTRYINDEX, DBL_STRONGREF_INDEX);
+		lua_rawsetp(L, -1, dbl);
+	}
+
 	dbl->screen = screen;
 	dbl->L = L;
 	dbl->type = dbl_type;
+	lua_pushvalue(L, param_index);
 	dbl->param = luaL_ref(L, LUA_REGISTRYINDEX);
 	
-	if(dbl_type->init(dbl, dbl_typename)) {
-		return dbl;
+	if(!dbl_type->init(dbl, dbl_typename)) {
+		if(strong) {
+			lua_getfield(L, LUA_REGISTRYINDEX, DBL_STRONGREF_INDEX);
+			lua_pushlightuserdata(L, dbl);
+			lua_pushnil(L);
+			lua_settable(L, -2);
+		}
+		dbl = NULL;
 	}
-	else {
-		lua_pop(L, 1);
-		return NULL;
-	}
+	lua_settop(L, stacktop);
+	return dbl;
+}
+
+Dabble*
+new_dabble(lua_State *L, const char *dbl_typename, SDL_Surface *screen) {
+	lua_pushnil(L);
+	return create_dabble(L, dbl_typename, screen, -1, 1);
+}
+
+void
+free_dabble(Dabble *dbl) {
+	// simply remove the strong reference and lua GC will
+	// take care of the rest
+	lua_State *L = dbl->L;
+	lua_getfield(L, LUA_REGISTRYINDEX, DBL_STRONGREF_INDEX);
+	lua_pushlightuserdata(L, dbl);
+	lua_pushnil(L);
+	lua_settable(L, -2);
+	lua_pop(L, 1);
+}
+
+void
+run_setup(Dabble *dbl) {
+	int stacktop = lua_gettop(dbl->L);
+	dbl->type->setup(dbl);
+	lua_settop(dbl->L, stacktop);
+}
+
+void
+run_draw(Dabble *dbl) {
+	int stacktop = lua_gettop(dbl->L);
+	dbl->type->draw(dbl);
+	lua_settop(dbl->L, stacktop);
 }
 
 void
 run_dabble(Dabble *dbl) {
-	int stacktop;
-	stacktop = lua_gettop(dbl->L);
 	debug("Runnin setup");
-	dbl->type->setup(dbl);
-	lua_settop(dbl->L, stacktop);
+	run_setup(dbl);
 
 	debug("Begin Main Loop");
 	// main loops
@@ -75,9 +131,7 @@ run_dabble(Dabble *dbl) {
 			}
 		}
 
-		stacktop = lua_gettop(dbl->L);
-		dbl->type->draw(dbl);
-		lua_settop(dbl->L, stacktop);
+		run_draw(dbl);
 		SDL_UpdateRect(dbl->screen, 0, 0, dbl->screen->w, dbl->screen->h); 
 	}
 }
@@ -102,6 +156,7 @@ int
 l_dabble_gc(lua_State *L) {
 	Dabble *dbl = (Dabble *)lua_touserdata(L, -1);
 	dbl->type->destroy(dbl);
+	luaL_unref(L, LUA_REGISTRYINDEX, dbl->self);
 	luaL_unref(L, LUA_REGISTRYINDEX, dbl->param);
 	return 0;
 }
@@ -113,8 +168,8 @@ l_dabble_create(lua_State *L) {
 	
 	lua_getfield(L, -1, "type");
 	const char *typename = lua_tostring(L, -1);
-	lua_pushvalue(L, -2);
-	create_dabble(L, typename, dbl->screen);
+	create_dabble(L, typename, dbl->screen, -2, 0);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, dbl->self);
 	return 1;
 }
 
@@ -122,6 +177,6 @@ static luaL_Reg dbllib[] = {
 	{"__gc", l_dabble_gc},
 	{"setup", l_dabble_setup},
 	{"draw", l_dabble_draw},
-	{"create", l_create_draw},
+	{"create", l_dabble_create},
 	{NULL, NULL}
 };

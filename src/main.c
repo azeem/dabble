@@ -58,12 +58,12 @@ main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	lua_pushnil(L);
-	Dabble *dbl = create_dabble(L, script_name, screen);
+	Dabble *dbl = new_dabble(L, script_name, screen);
 	if(!dbl) {
 		return 1;
 	}
 	run_dabble(dbl);
+	free_dabble(dbl);
 	
 	cleanup();
 	return EXIT_SUCCESS;
