@@ -68,6 +68,7 @@ dblscript_init(Dabble *dbl, const char *type_name) {
 	lua_getfield(L, LUA_REGISTRYINDEX, DBL_WEAKREF_INDEX);
 	lua_rawgetp(L, -1, dbl);
 	lua_setfield(L, -3, "dbl");
+	lua_pop(L, 1);
 	
 	lua_pushvalue(L, -1);
 	luaL_getmetatable(L, "DabbleScriptEnv");

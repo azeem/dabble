@@ -20,7 +20,7 @@ open_dbllib(lua_State *L) {
 	lua_newtable(L); // create weakreference table
 	lua_newtable(L);
 	lua_pushstring(L, "v");
-	lua_setfield(L, -1, "__mode");
+	lua_setfield(L, -2, "__mode");
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, DBL_WEAKREF_INDEX);
 
